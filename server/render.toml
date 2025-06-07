@@ -1,0 +1,21 @@
+[web]
+command = "gunicorn app.main:app -k uvicorn.workers.UvicornWorker -w 4 --bind 0.0.0.0:$PORT"
+env = "python"
+buildCommand = "pip install -r requirements.txt"
+
+[web.env]
+MONGODB_URI = "mongodb+srv://Sreenivasulu_Chowdam:Sreenu%402004@cluster1.usezpl8.mongodb.net/"
+FRONTEND_URL = "https://resume-extractor.windsurf.build"
+
+[web.ports]
+8000 = "8000"
+
+[web.healthCheck]
+path = "/"
+
+[database]
+name = "resume_extractor"
+type = "mongodb"
+
+[database.env]
+MONGODB_URI = "mongodb+srv://Sreenivasulu_Chowdam:Sreenu%402004@cluster1.usezpl8.mongodb.net/"
