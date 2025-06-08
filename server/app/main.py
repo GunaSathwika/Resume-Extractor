@@ -18,7 +18,13 @@ from typing import List, Optional, Dict, Any
 import fitz  # PyMuPDF
 import re
 import spacy
+import nltk
+import os
+import logging
+from pythonjsonlogger import jsonlogger
 from datetime import datetime
+import time
+import json
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
 import os
@@ -26,7 +32,6 @@ from dotenv import load_dotenv
 import logging
 from ratelimit import limits, RateLimitException
 from functools import wraps
-from time import time
 import traceback
 import uuid
 import filetype
@@ -154,11 +159,11 @@ async def rate_limit_middleware(request: Request, call_next):
 # Add request logging middleware with metrics
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    start_time = time()
+    start_time = time.time()
     
     try:
         response = await call_next(request)
-        process_time = time() - start_time
+        process_time = time.time() - start_time
         
         # Update Prometheus metrics
         download_counter.labels(
@@ -178,7 +183,7 @@ async def log_requests(request: Request, call_next):
         )
         return response
     except Exception as e:
-        process_time = time() - start_time
+        process_time = time.time() - start_time
         logger.error(
             f"{request.method} {request.url.path} - ERROR - {process_time:.2f}s - {str(e)}"
         )
