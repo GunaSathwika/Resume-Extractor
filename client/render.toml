@@ -1,0 +1,7 @@
+[web]
+command = "serve -s build"
+env = "node"
+buildCommand = "npm install && npm run build"
+
+[web.env]
+REACT_APP_API_URL = "https://resume-extractor-4523.onrender.com"
