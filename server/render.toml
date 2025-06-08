@@ -1,7 +1,7 @@
 [web]
 command = "gunicorn app.main:app -k uvicorn.workers.UvicornWorker -w 4 --bind 0.0.0.0:$PORT"
 env = "python"
-buildCommand = "pip install --upgrade pip && pip install -e . && cd ../client && npm install && npm run build && cd ../server && python -c 'import nltk; nltk.download("punkt")' && python -c 'import spacy; spacy.cli.download("en_core_web_sm")' && mkdir -p /opt/render/project/src/client/build && cp -r ../client/build/* /opt/render/project/src/client/build/"
+buildCommand = "pip install --upgrade pip && pip install -e . && cd ../client && npm install && npm run build && cd ../server && python -c 'import nltk; nltk.download("punkt")' && python -c 'import spacy; spacy.cli.download("en_core_web_sm")' && python -c 'import spacy; spacy.load("en_core_web_sm")' && mkdir -p /opt/render/project/src/client/build && cp -r ../client/build/* /opt/render/project/src/client/build/"
 
 [web.env]
 # MongoDB Configuration

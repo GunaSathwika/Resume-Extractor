@@ -388,11 +388,20 @@ resumes = db.resumes
 
 # Load NLP model
 try:
+    # Try to load the model
     nlp = spacy.load("en_core_web_sm")
     logger.info("Spacy model loaded successfully")
 except Exception as e:
     logger.error(f"Error loading Spacy model: {str(e)}")
-    raise
+    # Try to download and load again
+    try:
+        import spacy.cli
+        spacy.cli.download("en_core_web_sm")
+        nlp = spacy.load("en_core_web_sm")
+        logger.info("Spacy model downloaded and loaded successfully")
+    except Exception as e2:
+        logger.error(f"Failed to download and load Spacy model: {str(e2)}")
+        raise
 
 # Predefined skill list
 SKILLS = [
