@@ -51,3 +51,6 @@ targetCPUUtilizationPercentage = 75
 [web.resources]
 memory = "512MB"
 cpu = "0.5"
+
+[web.env]
+DEPLOYMENT_ENV = "production"
