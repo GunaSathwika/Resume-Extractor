@@ -13,7 +13,8 @@
     "react-router-dom": "^7.6.2",
     "react-scripts": "^5.0.1",
     "typescript": "^4.9.5",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "express": "^4.18.2"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^5.17.0",
@@ -35,7 +36,8 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "tailwind": "tailwindcss -i ./src/tailwind.css -o ./src/index.css --watch"
+    "tailwind": "tailwindcss -i ./src/tailwind.css -o ./src/index.css --watch",
+    "serve": "node server.js"
   },
   "eslintConfig": {
     "extends": [
