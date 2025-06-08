@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: resume-extractor-backend
+    env: python
+    buildCommand: "pip install -r requirements.txt && python -c 'import sys; print("Python path:", sys.path)'"
+    startCommand: "gunicorn app.main:app -k uvicorn.workers.UvicornWorker -w 4 --bind 0.0.0.0:$PORT"
+    envVars:
+      - key: MONGODB_URI
+        fromServices: []
+      - key: FRONTEND_URL
+        value: "https://resume-extractor-client.windsurf.build"
+    httpPort: 8000
+    healthCheckPath: "/"
+
+  - type: database
+    name: resume-extractor-db
+    database: mongodb
+    envVars:
+      - key: MONGODB_URI
+        fromServices: []
