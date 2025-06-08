@@ -387,7 +387,12 @@ db = client.resume_extractor
 resumes = db.resumes
 
 # Load NLP model
-nlp = spacy.load("en_core_web_sm")
+try:
+    nlp = spacy.load("en_core_web_sm")
+    logger.info("Spacy model loaded successfully")
+except Exception as e:
+    logger.error(f"Error loading Spacy model: {str(e)}")
+    raise
 
 # Predefined skill list
 SKILLS = [
