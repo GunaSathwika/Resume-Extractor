@@ -7,6 +7,12 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
+from fastapi.security import HTTPBearer
+from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel, ValidationError
 from typing import List, Optional, Dict, Any
 import fitz  # PyMuPDF
@@ -22,7 +28,11 @@ from ratelimit import limits, RateLimitException
 from functools import wraps
 from time import time
 import traceback
+import uuid
 import filetype
+from prometheus_client import Counter, Histogram, start_http_server
+from prometheus_client import make_asgi_app
+from fastapi.middleware.prometheus import PrometheusMiddleware, metrics
 
 # Set up logging
 logging.basicConfig(
@@ -42,8 +52,43 @@ load_dotenv()
 app = FastAPI(
     title="Resume Skill Extractor API",
     description="API for extracting skills and information from resumes",
-    version="1.0.0"
+    version="1.0.0",
+    docs_url=None,  # Disable default docs
+    redoc_url=None   # Disable default redoc
 )
+
+# Add Prometheus middleware
+app.add_middleware(PrometheusMiddleware)
+app.add_route("/metrics", metrics)
+
+# Add security middleware
+app.add_middleware(
+    HTTPSRedirectMiddleware,  # Redirect HTTP to HTTPS
+    trusted_hosts=[os.getenv("ALLOWED_HOSTS", "localhost")]
+)
+
+# Add session middleware
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.getenv("SECRET_KEY", "your-secret-key"),
+    max_age=3600  # 1 hour
+)
+
+# Initialize Prometheus metrics
+download_counter = Counter(
+    'resume_downloads',
+    'Number of resume downloads',
+    ['status_code', 'method', 'path']
+)
+
+request_latency = Histogram(
+    'request_latency_seconds',
+    'Request latency in seconds',
+    ['method', 'path', 'status_code']
+)
+
+# Initialize FastAPI app with security
+security = HTTPBearer()
 
 # Log server startup
 @app.on_event("startup")
@@ -62,15 +107,80 @@ async def startup_event():
 async def shutdown_event():
     logger.info("Server shutting down...")
 
-# Configure CORS
+# Configure CORS with security
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(',')
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST"],  # Only allow specific methods
+    allow_headers=["Authorization", "Content-Type"],  # Only allow specific headers
+    expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"]
 )
+
+# Add security headers middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
+
+# Add rate limiting middleware
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    if request.method in ["GET", "POST"]:
+        try:
+            rate_limit = int(os.getenv("RATE_LIMIT_REQUESTS", "100"))
+            window = int(os.getenv("RATE_LIMIT_WINDOW", "60"))
+            
+            @limits(calls=rate_limit, period=window)
+            async def limited():
+                return await call_next(request)
+            
+            return await limited()
+        except RateLimitException:
+            raise HTTPException(
+                status_code=429,
+                detail="Too many requests. Please try again later."
+            )
+    return await call_next(request)
+
+# Add request logging middleware with metrics
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time()
+    
+    try:
+        response = await call_next(request)
+        process_time = time() - start_time
+        
+        # Update Prometheus metrics
+        download_counter.labels(
+            status_code=str(response.status_code),
+            method=request.method,
+            path=str(request.url.path)
+        ).inc()
+        
+        request_latency.labels(
+            method=request.method,
+            path=str(request.url.path),
+            status_code=str(response.status_code)
+        ).observe(process_time)
+        
+        logger.info(
+            f"{request.method} {request.url.path} - {response.status_code} - {process_time:.2f}s"
+        )
+        return response
+    except Exception as e:
+        process_time = time() - start_time
+        logger.error(
+            f"{request.method} {request.url.path} - ERROR - {process_time:.2f}s - {str(e)}"
+        )
+        raise
 
 # Add GZip middleware for better performance
 app.add_middleware(GZipMiddleware, minimum_size=1000)
@@ -95,19 +205,51 @@ def rate_limited(limit: int):
 # Error handling middleware
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
-    logger.error(f"HTTP Exception: {exc.detail}")
+    logger.error(f"HTTP Exception: {exc.status_code} - {exc.detail}")
     return JSONResponse(
         status_code=exc.status_code,
-        content={"detail": exc.detail}
+        content={
+            "error": exc.detail,
+            "request": {
+                "method": request.method,
+                "url": str(request.url),
+                "headers": dict(request.headers)
+            }
+        }
     )
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Unexpected error: {str(exc)}\n{traceback.format_exc()}")
+    error_id = str(uuid.uuid4())
+    logger.error(f"Unexpected error ({error_id}): {str(exc)}\n{traceback.format_exc()}")
     return JSONResponse(
         status_code=500,
-        content={"detail": "An unexpected error occurred. Please try again later."}
+        content={
+            "error": "An unexpected error occurred. Please try again later.",
+            "error_id": error_id,
+            "request": {
+                "method": request.method,
+                "url": str(request.url),
+                "headers": dict(request.headers)
+            }
+        }
     )
+
+# Add request logging middleware
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    
+    try:
+        response = await call_next(request)
+        process_time = time.time() - start_time
+        
+        logger.info(f"{request.method} {request.url} - {response.status_code} - {process_time:.2f}s")
+        return response
+    except Exception as e:
+        process_time = time.time() - start_time
+        logger.error(f"{request.method} {request.url} - ERROR - {process_time:.2f}s - {str(e)}")
+        raise
 
 # Add static files serving
 import os
@@ -206,39 +348,27 @@ async def delete_resume(resume_id: str):
 async def upload_resume(
     file: UploadFile = File(..., description="PDF file to upload")
 ):
-    # Check file size
-    if file.size > 10 * 1024 * 1024:  # 10MB limit
-        raise HTTPException(
-            status_code=413,
-            detail="File too large. Maximum file size is 10MB"
-        )
-
-    # Validate file type using filetype
     try:
+        # Validate file type using filetype
         file_type = filetype.guess(await file.read(1024))
         if not file_type or file_type.mime != 'application/pdf':
-            raise HTTPException(status_code=400, detail="Only PDF files are allowed")
-    except Exception as e:
-        logger.error(f"Error validating file type: {str(e)}")
-        raise HTTPException(status_code=400, detail="Failed to validate file type")
-    
-    # Reset file pointer
-    await file.seek(0)
-    
-    # Check file size
-    if file.size > 10 * 1024 * 1024:  # 10MB limit
-        raise HTTPException(
-            status_code=413,
-            detail="File too large. Maximum file size is 10MB"
-        )
-    
-    try:
-        logger.info(f"Processing file: {file.filename}")
+            logger.error(f"Invalid file type: {file_type.mime if file_type else 'None'}")
+            raise HTTPException(
+                status_code=400,
+                detail="Only PDF files are allowed"
+            )
+            
+        # Reset file pointer
+        await file.seek(0)
         
-        # Read and process PDF
-        content = await file.read()
-    
-    try:
+        # Check file size
+        if file.size > 10 * 1024 * 1024:  # 10MB limit
+            logger.error(f"File too large: {file.size/1024/1024:.2f}MB")
+            raise HTTPException(
+                status_code=413,
+                detail="File too large. Maximum file size is 10MB"
+            )
+            
         logger.info(f"Processing file: {file.filename}")
         
         # Read and process PDF

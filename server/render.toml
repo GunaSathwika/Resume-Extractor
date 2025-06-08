@@ -1,14 +1,27 @@
 [web]
 command = "gunicorn app.main:app -k uvicorn.workers.UvicornWorker -w 4 --bind 0.0.0.0:$PORT"
 env = "python"
-buildCommand = "pip install -r requirements.txt"
+buildCommand = "pip install --upgrade pip && pip install -e ."
 
 [web.env]
-# MongoDB URI will be set via environment variables
-FRONTEND_URL = "https://resume-extractor.windsurf.build"
-ALLOWED_ORIGINS = "http://localhost:3000,https://resume-extractor.windsurf.build"
+# MongoDB Configuration
+MONGODB_URI = ""
+
+# Frontend Configuration
+FRONTEND_URL = ""
+
+# Server Configuration
+PORT = "8000"
+
+# Security Settings
+SECRET_KEY = ""
+
+# Rate Limiting
 RATE_LIMIT_REQUESTS = "100"
 RATE_LIMIT_WINDOW = "60"
+
+# CORS Settings
+ALLOWED_ORIGINS = ""
 
 [web.ports]
 8000 = "8000"
@@ -21,5 +34,4 @@ name = "resume_extractor"
 type = "mongodb"
 
 [database.env]
-# MongoDB URI will be set via environment variables
-MONGODB_URI = "mongodb+srv://Sreenivasulu_Chowdam:Sreenu%402004@cluster1.usezpl8.mongodb.net/resume_extractor?retryWrites=true&w=majority&appName=ResumeExtractor"
+MONGODB_URI = ""
