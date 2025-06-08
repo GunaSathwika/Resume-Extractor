@@ -39,16 +39,26 @@ from prometheus_client import Counter, Histogram
 from prometheus_client import make_asgi_app
 from prometheus_fastapi_instrumentator import Instrumentator
 
-# Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler('app.log')
-    ]
-)
+# Configure logging
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+# Create a file handler
+handler = logging.FileHandler('app.log')
+handler.setLevel(logging.INFO)
+
+# Create a formatter and set the format
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+
+# Add the handler to the logger
+logger.addHandler(handler)
+
+# Add console handler for easier debugging
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
 
 # Load environment variables
 load_dotenv()
