@@ -1,7 +1,7 @@
 [web]
 command = "gunicorn app.main:app -k uvicorn.workers.UvicornWorker -w 4 --bind 0.0.0.0:$PORT"
 env = "python"
-buildCommand = "pip install --upgrade pip && pip install -e . && python -c 'import nltk; nltk.download("punkt")'"
+buildCommand = "pip install --upgrade pip && pip install -e . && cd ../client && npm install && npm run build && cd ../server && python -c 'import nltk; nltk.download("punkt")'"
 
 [web.env]
 # MongoDB Configuration

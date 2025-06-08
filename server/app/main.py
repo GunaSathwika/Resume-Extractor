@@ -326,7 +326,13 @@ async def log_requests(request: Request, call_next):
 
 # Add static files serving
 import os
-app.mount("/static", StaticFiles(directory=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "client", "build")), name="static")
+from pathlib import Path
+
+# Get the root directory of the project
+ROOT_DIR = Path(__file__).parent.parent.parent
+
+# Mount static files
+app.mount("/static", StaticFiles(directory=ROOT_DIR / "client" / "build"), name="static")
 
 # Custom error handlers
 @app.exception_handler(RequestValidationError)
