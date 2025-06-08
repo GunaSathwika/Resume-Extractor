@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_ENDPOINTS } from '../config/api';
 import { MagnifyingGlassIcon as SearchIcon, EyeIcon, TrashIcon, ArrowDownTrayIcon as DownloadIcon, TagIcon } from '@heroicons/react/24/outline';
 
 interface Resume {
@@ -25,7 +26,7 @@ const ResumeList: React.FC = () => {
 
   const fetchResumes = async () => {
     try {
-      const response = await axios.get('http://localhost:8000/resumes');
+      const response = await axios.get(API_ENDPOINTS.RESUMES);
       setResumes(response.data);
     } catch (error) {
       console.error('Error fetching resumes:', error);
@@ -40,7 +41,7 @@ const ResumeList: React.FC = () => {
     if (!window.confirm('Are you sure you want to delete this resume?')) return;
 
     try {
-      await axios.delete(`http://localhost:8000/resumes/${id}`);
+      await axios.delete(API_ENDPOINTS.DELETE(id));
       fetchResumes();
     } catch (error) {
       console.error('Error deleting resume:', error);
