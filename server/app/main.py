@@ -328,11 +328,16 @@ async def log_requests(request: Request, call_next):
 import os
 from pathlib import Path
 
-# Get the root directory of the project
-ROOT_DIR = Path(__file__).parent.parent.parent
+# Get the build directory from environment variable
+BUILD_DIR = os.getenv("CLIENT_BUILD_DIR", Path(__file__).parent.parent.parent / "client" / "build")
 
 # Mount static files
-app.mount("/static", StaticFiles(directory=ROOT_DIR / "client" / "build"), name="static")
+try:
+    app.mount("/static", StaticFiles(directory=BUILD_DIR), name="static")
+    logger.info(f"Static files mounted from: {BUILD_DIR}")
+except Exception as e:
+    logger.error(f"Error mounting static files: {str(e)}")
+    raise
 
 # Custom error handlers
 @app.exception_handler(RequestValidationError)

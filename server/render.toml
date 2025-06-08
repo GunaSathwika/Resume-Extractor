@@ -39,6 +39,62 @@ timeout = "10s"
 name = "resume_extractor"
 type = "mongodb"
 
+[web.autoscaling]
+enabled = true
+minReplicas = 1
+maxReplicas = 3
+targetCPUUtilizationPercentage = 75
+
+[web.resources]
+memory = "512MB"
+cpu = "0.5"
+
+[web.env]
+DEPLOYMENT_ENV = "production"
+
+# Add client build directory
+[web.build]
+directory = "/opt/render/project/src/client/build"
+
+[web.env]
+CLIENT_BUILD_DIR = "/opt/render/project/src/client/build"
+
+[web.env]
+# MongoDB Configuration
+MONGODB_URI = ""
+
+# Frontend Configuration
+FRONTEND_URL = ""
+
+# Server Configuration
+PORT = "8000"
+
+# Security Settings
+SECRET_KEY = ""
+
+# Rate Limiting
+RATE_LIMIT_REQUESTS = "100"
+RATE_LIMIT_WINDOW = "60"
+
+# CORS Settings
+ALLOWED_ORIGINS = ""
+
+# Prometheus Metrics
+PROMETHEUS_PORT = "8001"
+
+[web.ports]
+8000 = "8000"
+8001 = "8001"  # Prometheus metrics port
+
+[web.healthCheck]
+path = "/health"
+interval = "30s"
+timeout = "10s"
+
+[database]
+name = "resume_extractor"
+type = "mongodb"
+
 [database.env]
 MONGODB_URI = ""
 
