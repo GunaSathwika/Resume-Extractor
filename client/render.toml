@@ -1,5 +1,6 @@
 [web]
 command = "npm run serve"
+root = "/client"
 env = "node"
 buildCommand = "npm install && npm run build"
 
