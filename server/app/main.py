@@ -32,7 +32,7 @@ import uuid
 import filetype
 from prometheus_client import Counter, Histogram, start_http_server
 from prometheus_client import make_asgi_app
-from fastapi.middleware.prometheus import PrometheusMiddleware, metrics
+from prometheus_fastapi_instrumentator import Instrumentator
 
 # Set up logging
 logging.basicConfig(
@@ -276,8 +276,9 @@ async def startup_event():
         )
         
         # Initialize FastAPI app with Prometheus
-        app.add_middleware(PrometheusMiddleware)
-        app.add_route("/metrics", metrics)
+        from prometheus_fastapi_instrumentator import Instrumentator
+        instrumentator = Instrumentator().instrument(app)
+        instrumentator.expose(app, endpoint="/metrics", include_in_schema=False)
         
         # Initialize MongoDB connection
         client = AsyncIOMotorClient(os.getenv("MONGODB_URI"))
