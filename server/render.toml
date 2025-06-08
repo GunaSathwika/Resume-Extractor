@@ -1,7 +1,7 @@
 [web]
 command = "gunicorn app.main:app -k uvicorn.workers.UvicornWorker -w 4 --bind 0.0.0.0:$PORT"
 env = "python"
-buildCommand = "pip install --upgrade pip && pip install -e ."
+buildCommand = "pip install --upgrade pip && pip install -e . && python -c 'import nltk; nltk.download("punkt")'"
 
 [web.env]
 # MongoDB Configuration
@@ -23,11 +23,17 @@ RATE_LIMIT_WINDOW = "60"
 # CORS Settings
 ALLOWED_ORIGINS = ""
 
+# Prometheus Metrics
+PROMETHEUS_PORT = "8001"
+
 [web.ports]
 8000 = "8000"
+8001 = "8001"  # Prometheus metrics port
 
 [web.healthCheck]
 path = "/health"
+interval = "30s"
+timeout = "10s"
 
 [database]
 name = "resume_extractor"
@@ -35,3 +41,13 @@ type = "mongodb"
 
 [database.env]
 MONGODB_URI = ""
+
+[web.autoscaling]
+enabled = true
+minReplicas = 1
+maxReplicas = 3
+targetCPUUtilizationPercentage = 75
+
+[web.resources]
+memory = "512MB"
+cpu = "0.5"

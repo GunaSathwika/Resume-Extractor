@@ -222,6 +222,28 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 async def general_exception_handler(request: Request, exc: Exception):
     error_id = str(uuid.uuid4())
     logger.error(f"Unexpected error ({error_id}): {str(exc)}\n{traceback.format_exc()}")
+    
+    # Log detailed error information
+    error_details = {
+        "error_id": error_id,
+        "timestamp": datetime.now().isoformat(),
+        "request": {
+            "method": request.method,
+            "url": str(request.url),
+            "headers": dict(request.headers),
+            "client": request.client.host if request.client else "unknown"
+        },
+        "exception": {
+            "type": type(exc).__name__,
+            "message": str(exc),
+            "traceback": traceback.format_exc()
+        }
+    }
+    
+    # Log to file with detailed information
+    with open("error.log", "a") as f:
+        f.write(json.dumps(error_details, indent=2) + "\n")
+    
     return JSONResponse(
         status_code=500,
         content={
@@ -235,6 +257,60 @@ async def general_exception_handler(request: Request, exc: Exception):
         }
     )
 
+# Add startup event handler
+@app.on_event("startup")
+async def startup_event():
+    logger.info("Server starting up...")
+    try:
+        # Initialize Prometheus metrics
+        download_counter = Counter(
+            'resume_downloads',
+            'Number of resume downloads',
+            ['status_code', 'method', 'path']
+        )
+        
+        request_latency = Histogram(
+            'request_latency_seconds',
+            'Request latency in seconds',
+            ['method', 'path', 'status_code']
+        )
+        
+        # Initialize FastAPI app with Prometheus
+        app.add_middleware(PrometheusMiddleware)
+        app.add_route("/metrics", metrics)
+        
+        # Initialize MongoDB connection
+        client = AsyncIOMotorClient(os.getenv("MONGODB_URI"))
+        await client.server_info()
+        logger.info("MongoDB connection successful")
+        
+        # Initialize NLTK data
+        try:
+            import nltk
+            nltk.download("punkt")
+            logger.info("NLTK data initialized successfully")
+        except Exception as e:
+            logger.error(f"Error initializing NLTK data: {str(e)}")
+            raise
+        
+    except Exception as e:
+        logger.error(f"Startup error: {str(e)}")
+        raise
+
+# Add shutdown event handler
+@app.on_event("shutdown")
+async def shutdown_event():
+    logger.info("Server shutting down...")
+    try:
+        # Close MongoDB connection
+        if "client" in globals():
+            client.close()
+            logger.info("MongoDB connection closed")
+        
+    except Exception as e:
+        logger.error(f"Shutdown error: {str(e)}")
+        raise
+
 # Add request logging middleware
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -243,6 +319,21 @@ async def log_requests(request: Request, call_next):
     try:
         response = await call_next(request)
         process_time = time.time() - start_time
+        
+        # Log request details
+        log_data = {
+            "timestamp": datetime.now().isoformat(),
+            "method": request.method,
+            "url": str(request.url),
+            "status_code": response.status_code,
+            "processing_time": process_time,
+            "client": request.client.host if request.client else "unknown",
+            "user_agent": request.headers.get("user-agent", "unknown")
+        }
+        
+        # Log to file
+        with open("access.log", "a") as f:
+            f.write(json.dumps(log_data, indent=2) + "\n")
         
         logger.info(f"{request.method} {request.url} - {response.status_code} - {process_time:.2f}s")
         return response
