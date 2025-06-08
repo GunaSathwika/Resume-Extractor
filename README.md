@@ -1,100 +1,122 @@
-# Resume Skill Extractor
+# Resume Extractor
 
-An end-to-end web application that extracts structured data from PDF resumes using NLP techniques.
+A full-stack application for extracting skills and information from resumes using FastAPI and React.
 
 ## Features
 
-- Upload PDF resumes
-- Extract structured data (name, email, phone, skills, experience)
-- Filter resumes by skills
-- View detailed resume information
-- Responsive design
+- Resume upload and processing
+- Skill extraction using Spacy
+- Modern React frontend
+- RESTful API backend
+- MongoDB database integration
+- Prometheus monitoring
+- Rate limiting and security features
 
 ## Tech Stack
 
-- Frontend: React + TailwindCSS
-- Backend: FastAPI (Python)
+- Frontend: React
+- Backend: FastAPI
 - Database: MongoDB
-- PDF Parsing: PyMuPDF
-- NLP: spaCy
-
-## Setup Instructions
-
-### Backend Setup
-
-1. Install Python dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-2. Install spaCy model:
-```bash
-python -m spacy download en_core_web_sm
-```
-
-3. Run the backend server:
-```bash
-uvicorn server.main:app --reload
-```
-
-### Frontend Setup
-
-1. Navigate to the client directory:
-```bash
-cd client
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Start the development server:
-```bash
-npm run dev
-```
-
-### MongoDB Setup
-
-You can use either:
-1. Local MongoDB installation
-2. MongoDB Atlas (recommended for production)
-
-If using MongoDB Atlas:
-1. Create a new cluster
-2. Add your IP address to the whitelist
-3. Create a database user
-4. Update the `.env` file with your connection string
-
-### Environment Variables
-
-Create a `.env` file in the root directory with the following:
-```
-MONGODB_URI=mongodb://localhost:27017
-```
-
-## API Endpoints
-
-- POST `/upload` - Upload a PDF resume
-- GET `/resumes` - Get list of all resumes
-- GET `/resumes/{id}` - Get specific resume details
+- NLP: Spacy
+- Monitoring: Prometheus
+- Deployment: Render
 
 ## Project Structure
 
 ```
 resume-extractor/
-├── client/         # React frontend
-├── server/         # FastAPI backend
-├── requirements.txt # Python dependencies
-└── README.md
+├── client/                 # React frontend
+│   ├── public/            # Static assets
+│   └── src/               # Source code
+│       ├── components/    # React components
+│       ├── pages/         # Page components
+│       ├── services/      # API services
+│       └── App.js         # Main application
+├── server/                # FastAPI backend
+│   ├── app/              # FastAPI application
+│   │   ├── main.py       # Main application
+│   │   ├── models/       # Pydantic models
+│   │   └── routes/       # API routes
+│   └── tests/            # Test files
+├── .env                  # Environment variables
+├── requirements.txt      # Python dependencies
+├── setup.py              # Python package setup
+└── README.md            # Documentation
 ```
 
-## Usage
+## Setup Instructions
 
-1. Start both frontend and backend servers
-2. Navigate to `http://localhost:3000`
-3. Upload a PDF resume
-4. View extracted information and filter by skills
+### Prerequisites
+
+- Python 3.10+
+- Node.js 16+
+- MongoDB
+- Git
+
+### Backend Setup
+
+1. Install Python dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. Set up environment variables:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your configuration
+   ```
+
+3. Run the backend:
+   ```bash
+   uvicorn app.main:app --reload
+   ```
+
+### Frontend Setup
+
+1. Install Node dependencies:
+   ```bash
+   cd client
+   npm install
+   ```
+
+2. Run the frontend:
+   ```bash
+   npm start
+   ```
+
+### Deployment
+
+The application is configured for deployment on Render.com. The deployment configuration is in:
+
+- `server/render.toml` - Main deployment configuration
+- `server/render.yaml` - Alternative deployment configuration
+
+### Monitoring
+
+The application includes Prometheus monitoring with the following metrics:
+
+- Request counts
+- Request latency
+- Resume downloads
+- Error tracking
+
+Access metrics at `/metrics` endpoint.
+
+## Security Features
+
+- Rate limiting
+- HTTPS enforcement
+- Secure headers
+- Session management
+- CORS configuration
+- Environment variable based configuration
+
+## API Documentation
+
+The API is documented using FastAPI's automatic documentation. Access it at:
+
+- Swagger UI: `/docs`
+- ReDoc: `/redoc`
 
 ## Contributing
 
@@ -106,4 +128,4 @@ resume-extractor/
 
 ## License
 
-MIT License
+This project is licensed under the MIT License - see the LICENSE file for details.
