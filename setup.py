@@ -21,7 +21,9 @@ setup(
         "ratelimit==2.2.1",
         "httpx==0.25.1",
         "filetype>=1.2.0",
-        "itsdangerous==2.1.2"
+        "itsdangerous==2.1.2",
+        "prometheus-client==0.19.0",
+        "prometheus-fastapi-instrumentator==5.9.1"
     ],
     python_requires='>=3.8',
 )
