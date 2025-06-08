@@ -86,7 +86,7 @@ app.add_middleware(
 # Add trusted hosts middleware
 app.add_middleware(
     TrustedHostMiddleware,
-    trusted_hosts=[os.getenv("ALLOWED_HOSTS", "localhost")]
+    allowed_hosts=["*"],  # Allow all hosts in production
 )
 
 # Initialize FastAPI app with security
