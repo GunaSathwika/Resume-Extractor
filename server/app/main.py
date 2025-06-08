@@ -21,7 +21,7 @@ import spacy
 import nltk
 import os
 import logging
-from pythonjsonlogger import jsonlogger
+
 from datetime import datetime
 import time
 import json
