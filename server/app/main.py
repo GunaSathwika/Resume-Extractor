@@ -44,6 +44,23 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Log server startup
+@app.on_event("startup")
+async def startup_event():
+    logger.info("Server starting up...")
+    try:
+        # Test MongoDB connection
+        client = AsyncIOMotorClient(os.getenv("MONGODB_URI"))
+        await client.server_info()
+        logger.info("MongoDB connection successful")
+    except Exception as e:
+        logger.error(f"MongoDB connection failed: {str(e)}")
+        raise
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    logger.info("Server shutting down...")
+
 # Configure CORS
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(',')
 app.add_middleware(
@@ -92,7 +109,8 @@ async def general_exception_handler(request: Request, exc: Exception):
     )
 
 # Add static files serving
-app.mount("/static", StaticFiles(directory="../client/build"), name="static")
+import os
+app.mount("/static", StaticFiles(directory=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "client", "build")), name="static")
 
 # Custom error handlers
 @app.exception_handler(RequestValidationError)
