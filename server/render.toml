@@ -4,18 +4,18 @@ env = "python"
 buildCommand = "pip install -r requirements.txt"
 
 [web.env]
-MONGODB_URI = "mongodb+srv://Sreenivasulu_Chowdam:Sreenu%402004@cluster1.usezpl8.mongodb.net/"
+# MongoDB URI will be set via environment variables
 FRONTEND_URL = "https://resume-extractor.windsurf.build"
 
 [web.ports]
 8000 = "8000"
 
 [web.healthCheck]
-path = "/"
+path = "/health"
 
 [database]
 name = "resume_extractor"
 type = "mongodb"
 
 [database.env]
-MONGODB_URI = "mongodb+srv://Sreenivasulu_Chowdam:Sreenu%402004@cluster1.usezpl8.mongodb.net/"
+# MongoDB URI will be set via environment variables

@@ -1,7 +1,14 @@
 from fastapi import FastAPI, UploadFile, HTTPException, File, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List, Optional
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.openapi.utils import get_openapi
+from pydantic import BaseModel, ValidationError
+from typing import List, Optional, Dict, Any
 import fitz  # PyMuPDF
 import re
 import spacy
@@ -11,25 +18,118 @@ from bson import ObjectId
 import os
 from dotenv import load_dotenv
 import logging
+from ratelimit import limits, RateLimitException
+from functools import wraps
+from time import time
+import traceback
 
 # Set up logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('app.log')
+    ]
+)
 logger = logging.getLogger(__name__)
 
+# Load environment variables
 load_dotenv()
 
-app = FastAPI(title="Resume Skill Extractor API")
-
-# Serve static files
+# Initialize FastAPI app
+app = FastAPI(
+    title="Resume Skill Extractor API",
+    description="API for extracting skills and information from resumes",
+    version="1.0.0"
+)
 
 # Configure CORS
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(',')
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # React frontend
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add GZip middleware for better performance
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# Add rate limiting decorator
+FIVE_MINUTES = 300
+
+def rate_limited(limit: int):
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            try:
+                return await func(*args, **kwargs)
+            except RateLimitException:
+                raise HTTPException(
+                    status_code=429,
+                    detail="Too many requests. Please try again later."
+                )
+        return wrapper
+    return decorator
+
+# Error handling middleware
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    logger.error(f"HTTP Exception: {exc.detail}")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail}
+    )
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unexpected error: {str(exc)}\n{traceback.format_exc()}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "An unexpected error occurred. Please try again later."}
+    )
+
+# Add static files serving
+app.mount("/static", StaticFiles(directory="../client/build"), name="static")
+
+# Custom error handlers
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.error(f"Validation Error: {exc.errors()}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors(), "body": exc.body}
+    )
+
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+
+# OpenAPI documentation
+@app.get("/docs", include_in_schema=False)
+async def custom_swagger_ui_html():
+    return get_swagger_ui_html(
+        openapi_url=app.openapi_url,
+        title=app.title + " - API Documentation",
+        swagger_favicon_url="/static/favicon.ico"
+    )
+
+# Root endpoint
+@app.get("/")
+async def root():
+    return {"message": "Welcome to Resume Skill Extractor API"}
+
+# Database connection
+async def get_db():
+    try:
+        client = AsyncIOMotorClient(os.getenv("MONGODB_URI"))
+        db = client.resume_extractor
+        yield db
+    finally:
+        client.close()
 
 # MongoDB connection
 client = AsyncIOMotorClient(os.getenv("MONGODB_URI", "mongodb://localhost:27017"))
