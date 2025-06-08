@@ -30,7 +30,7 @@ from time import time
 import traceback
 import uuid
 import filetype
-from prometheus_client import Counter, Histogram, start_http_server
+from prometheus_client import Counter, Histogram
 from prometheus_client import make_asgi_app
 from prometheus_fastapi_instrumentator import Instrumentator
 
@@ -58,21 +58,7 @@ app = FastAPI(
 )
 
 # Add Prometheus middleware
-app.add_middleware(PrometheusMiddleware)
-app.add_route("/metrics", metrics)
-
-# Add security middleware
-app.add_middleware(
-    HTTPSRedirectMiddleware,  # Redirect HTTP to HTTPS
-    trusted_hosts=[os.getenv("ALLOWED_HOSTS", "localhost")]
-)
-
-# Add session middleware
-app.add_middleware(
-    SessionMiddleware,
-    secret_key=os.getenv("SECRET_KEY", "your-secret-key"),
-    max_age=3600  # 1 hour
-)
+app.add_route("/metrics", make_asgi_app())
 
 # Initialize Prometheus metrics
 download_counter = Counter(
@@ -85,6 +71,19 @@ request_latency = Histogram(
     'request_latency_seconds',
     'Request latency in seconds',
     ['method', 'path', 'status_code']
+)
+
+# Add security middleware
+app.add_middleware(
+    HTTPSRedirectMiddleware,  # Redirect HTTP to HTTPS
+    trusted_hosts=[os.getenv("ALLOWED_HOSTS", "localhost")]
+)
+
+# Add session middleware
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.getenv("SECRET_KEY", "your-secret-key"),
+    max_age=3600  # 1 hour
 )
 
 # Initialize FastAPI app with security
@@ -262,24 +261,6 @@ async def general_exception_handler(request: Request, exc: Exception):
 async def startup_event():
     logger.info("Server starting up...")
     try:
-        # Initialize Prometheus metrics
-        download_counter = Counter(
-            'resume_downloads',
-            'Number of resume downloads',
-            ['status_code', 'method', 'path']
-        )
-        
-        request_latency = Histogram(
-            'request_latency_seconds',
-            'Request latency in seconds',
-            ['method', 'path', 'status_code']
-        )
-        
-        # Initialize FastAPI app with Prometheus
-        from prometheus_fastapi_instrumentator import Instrumentator
-        instrumentator = Instrumentator().instrument(app)
-        instrumentator.expose(app, endpoint="/metrics", include_in_schema=False)
-        
         # Initialize MongoDB connection
         client = AsyncIOMotorClient(os.getenv("MONGODB_URI"))
         await client.server_info()
