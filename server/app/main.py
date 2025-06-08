@@ -22,6 +22,7 @@ from ratelimit import limits, RateLimitException
 from functools import wraps
 from time import time
 import traceback
+import filetype
 
 # Set up logging
 logging.basicConfig(
@@ -212,8 +213,30 @@ async def upload_resume(
             detail="File too large. Maximum file size is 10MB"
         )
 
-    if not file.filename.endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+    # Validate file type using filetype
+    try:
+        file_type = filetype.guess(await file.read(1024))
+        if not file_type or file_type.mime != 'application/pdf':
+            raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+    except Exception as e:
+        logger.error(f"Error validating file type: {str(e)}")
+        raise HTTPException(status_code=400, detail="Failed to validate file type")
+    
+    # Reset file pointer
+    await file.seek(0)
+    
+    # Check file size
+    if file.size > 10 * 1024 * 1024:  # 10MB limit
+        raise HTTPException(
+            status_code=413,
+            detail="File too large. Maximum file size is 10MB"
+        )
+    
+    try:
+        logger.info(f"Processing file: {file.filename}")
+        
+        # Read and process PDF
+        content = await file.read()
     
     try:
         logger.info(f"Processing file: {file.filename}")
