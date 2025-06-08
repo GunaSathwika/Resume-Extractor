@@ -1,6 +1,5 @@
 from fastapi import FastAPI, UploadFile, HTTPException, File, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import List, Optional
 import fitz  # PyMuPDF
@@ -22,7 +21,6 @@ load_dotenv()
 app = FastAPI(title="Resume Skill Extractor API")
 
 # Serve static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Configure CORS
 app.add_middleware(
