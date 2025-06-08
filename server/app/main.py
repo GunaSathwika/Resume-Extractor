@@ -331,9 +331,14 @@ from pathlib import Path
 # Get the build directory from environment variable
 BUILD_DIR = os.getenv("CLIENT_BUILD_DIR", Path(__file__).parent.parent.parent / "client" / "build")
 
+# Create build directory if it doesn't exist
+if not BUILD_DIR.exists():
+    BUILD_DIR.mkdir(parents=True, exist_ok=True)
+    logger.info(f"Created build directory: {BUILD_DIR}")
+
 # Mount static files
 try:
-    app.mount("/static", StaticFiles(directory=BUILD_DIR), name="static")
+    app.mount("/static", StaticFiles(directory=str(BUILD_DIR)), name="static")
     logger.info(f"Static files mounted from: {BUILD_DIR}")
 except Exception as e:
     logger.error(f"Error mounting static files: {str(e)}")
