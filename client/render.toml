@@ -1,8 +1,8 @@
 [web]
-command = "npm run serve"
+command = ""
 root = "/client"
-env = "node"
-buildCommand = "npm install && npm run build"
+env = "docker"
+dockerfile = "Dockerfile"
 
 [web.env]
 REACT_APP_API_URL = "https://resume-extractor-4523.onrender.com"
