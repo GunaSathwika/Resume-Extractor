@@ -20,7 +20,8 @@ setup(
         "pandas==2.0.3",
         "ratelimit==2.2.1",
         "httpx==0.25.1",
-        "filetype>=1.2.0"
+        "filetype>=1.2.0",
+        "itsdangerous==2.1.2"
     ],
     python_requires='>=3.8',
 )
