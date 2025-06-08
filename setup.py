@@ -15,12 +15,12 @@ setup(
         "pymongo==4.5.0",
         "python-jose[cryptography]==3.3.0",
         "passlib[bcrypt]==1.7.4",
-        "python-magic-bin==0.4.14",
         "nltk==3.8.1",
         "spacy==3.7.2",
         "pandas==2.0.3",
-        "ratelimit==2.2.1",
-        "httpx==0.25.1"
+        "ratelimit==2.2.12",
+        "httpx==0.25.1",
+        "filetype>=1.2.0"
     ],
     python_requires='>=3.8',
 )
