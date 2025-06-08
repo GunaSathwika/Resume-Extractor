@@ -18,7 +18,7 @@ setup(
         "nltk==3.8.1",
         "spacy==3.7.2",
         "pandas==2.0.3",
-        "ratelimit==2.2.12",
+        "ratelimit==2.2.1",
         "httpx==0.25.1",
         "filetype>=1.2.0"
     ],
