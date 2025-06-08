@@ -9,8 +9,6 @@ from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 from fastapi.security import HTTPBearer
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
-from starlette.middleware import Middleware
-from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.cors import CORSMiddleware
@@ -76,9 +74,7 @@ request_latency = Histogram(
 )
 
 # Add security middleware
-app.add_middleware(
-    HTTPSRedirectMiddleware  # Redirect HTTP to HTTPS
-)
+app.add_middleware(HTTPSRedirectMiddleware)
 
 # Add session middleware
 app.add_middleware(
@@ -86,22 +82,6 @@ app.add_middleware(
     secret_key=os.getenv("SECRET_KEY", "your-secret-key"),
     max_age=3600  # 1 hour
 )
-
-# Add trusted hosts middleware
-class TrustedHostMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, trusted_hosts):
-        super().__init__(app)
-        self.trusted_hosts = trusted_hosts
-
-    async def dispatch(self, request, call_next):
-        host = request.headers.get("host")
-        if host not in self.trusted_hosts:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid host header"
-            )
-        response = await call_next(request)
-        return response
 
 # Add trusted hosts middleware
 app.add_middleware(
